@@ -22,22 +22,28 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ManagePaperScreen(ownerId: String, paperViewModel: PaperViewModel) {
-    val scope = rememberCoroutineScope()
+
     val paperOptions by paperViewModel.paperOptions.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     var newType by remember { mutableStateOf("") }
     var newSize by remember { mutableStateOf("") }
     var newPriceBW by remember { mutableStateOf("") }
     var newPriceColored by remember { mutableStateOf("") }
-    val snackbar = remember { SnackbarHostState() }
 
-    // For edit dialog
+    // Edit dialog states
     var editingPaperIndex by remember { mutableStateOf<Int?>(null) }
     var editType by remember { mutableStateOf("") }
     var editSize by remember { mutableStateOf("") }
     var editPriceBW by remember { mutableStateOf("") }
     var editPriceColored by remember { mutableStateOf("") }
     var isEditDialogOpen by remember { mutableStateOf(false) }
+
+    // Delete dialog
+    var isDeleteDialogOpen by remember { mutableStateOf(false) }
+    var deletingPaperIndex by remember { mutableStateOf<Int?>(null) }
+    var recentlyDeletedPaper by remember { mutableStateOf<PaperOption?>(null) }
 
     LaunchedEffect(ownerId) {
         paperViewModel.loadPaperOptions(ownerId)
@@ -53,8 +59,9 @@ fun ManagePaperScreen(ownerId: String, paperViewModel: PaperViewModel) {
                 )
             )
         },
-        snackbarHost = { SnackbarHost(snackbar) }
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -62,15 +69,17 @@ fun ManagePaperScreen(ownerId: String, paperViewModel: PaperViewModel) {
                 .background(Color(0xFFF9FAFB))
                 .padding(16.dp)
         ) {
-            // ---------------- Add New Paper Section ----------------
+
+            // ---------- Add Paper ----------
             Text(
                 "Add New Paper Option",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
+
             Spacer(Modifier.height(12.dp))
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = newType,
                     onValueChange = { newType = it },
@@ -87,7 +96,7 @@ fun ManagePaperScreen(ownerId: String, paperViewModel: PaperViewModel) {
 
             Spacer(Modifier.height(8.dp))
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = newPriceBW,
                     onValueChange = { newPriceBW = it },
@@ -108,42 +117,55 @@ fun ManagePaperScreen(ownerId: String, paperViewModel: PaperViewModel) {
                 onClick = {
                     val bw = newPriceBW.toDoubleOrNull()
                     val colored = newPriceColored.toDoubleOrNull()
+
                     if (newType.isBlank() || newSize.isBlank() || bw == null || colored == null) {
-                        scope.launch { snackbar.showSnackbar("Please fill all fields correctly") }
+                        scope.launch {
+                            snackbarHostState.showSnackbar(
+                                message = "Please fill all fields correctly"
+                            )
+                        }
                         return@Button
                     }
-                    val paperOption = PaperOption(newType, newSize, bw, colored)
-                    paperViewModel.addPaperOption(ownerId, paperOption)
-                    newType = ""; newSize = ""; newPriceBW = ""; newPriceColored = ""
+
+                    paperViewModel.addPaperOption(
+                        ownerId,
+                        PaperOption(newType, newSize, bw, colored)
+                    )
+
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            message = "Paper option added successfully",
+                            duration = SnackbarDuration.Short
+                        )
+                    }
+
+                    newType = ""
+                    newSize = ""
+                    newPriceBW = ""
+                    newPriceColored = ""
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
+                modifier = Modifier.fillMaxWidth().height(50.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))
             ) {
-                Text("Add Paper Option", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                Text("Add Paper Option", color = Color.White)
             }
 
             Spacer(Modifier.height(24.dp))
 
-            // ---------------- Existing Paper Options ----------------
+            // ---------- Existing Papers ----------
             Text(
                 "Existing Paper Options",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
+
             Spacer(Modifier.height(12.dp))
 
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 itemsIndexed(paperOptions) { index, paper ->
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
-                        elevation = CardDefaults.cardElevation(4.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White)
+                        elevation = CardDefaults.cardElevation(4.dp)
                     ) {
                         Row(
                             modifier = Modifier
@@ -153,15 +175,9 @@ fun ManagePaperScreen(ownerId: String, paperViewModel: PaperViewModel) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column {
-                                Text(
-                                    "${paper.type} - ${paper.size}",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Spacer(Modifier.height(4.dp))
+                                Text("${paper.type} - ${paper.size}", fontWeight = FontWeight.SemiBold)
                                 Text(
                                     "₱${paper.priceBW} BW | ₱${paper.priceColored} Colored",
-                                    style = MaterialTheme.typography.bodyMedium,
                                     color = Color.Gray
                                 )
                             }
@@ -174,12 +190,15 @@ fun ManagePaperScreen(ownerId: String, paperViewModel: PaperViewModel) {
                                     editPriceColored = paper.priceColored.toString()
                                     isEditDialogOpen = true
                                 }) {
-                                    Icon(Icons.Filled.Edit, contentDescription = "Edit", tint = Color(0xFF2196F3))
+                                    Icon(Icons.Default.Edit, contentDescription = "Edit")
                                 }
+
                                 IconButton(onClick = {
-                                    paperViewModel.deletePaperOption(ownerId, index)
+                                    deletingPaperIndex = index
+                                    recentlyDeletedPaper = paper
+                                    isDeleteDialogOpen = true
                                 }) {
-                                    Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color.Red)
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)
                                 }
                             }
                         }
@@ -189,29 +208,39 @@ fun ManagePaperScreen(ownerId: String, paperViewModel: PaperViewModel) {
         }
     }
 
-    // ---------------- Edit Paper Dialog ----------------
+    // ---------- Edit Dialog ----------
     if (isEditDialogOpen && editingPaperIndex != null) {
         AlertDialog(
             onDismissRequest = { isEditDialogOpen = false },
             title = { Text("Edit Paper Option") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = editType, onValueChange = { editType = it }, label = { Text("Type") })
-                    OutlinedTextField(value = editSize, onValueChange = { editSize = it }, label = { Text("Size") })
-                    OutlinedTextField(value = editPriceBW, onValueChange = { editPriceBW = it }, label = { Text("Price BW") })
-                    OutlinedTextField(value = editPriceColored, onValueChange = { editPriceColored = it }, label = { Text("Price Colored") })
+                Column {
+                    OutlinedTextField(editType, { editType = it }, label = { Text("Type") })
+                    OutlinedTextField(editSize, { editSize = it }, label = { Text("Size") })
+                    OutlinedTextField(editPriceBW, { editPriceBW = it }, label = { Text("Price BW") })
+                    OutlinedTextField(editPriceColored, { editPriceColored = it }, label = { Text("Price Colored") })
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
                     val bw = editPriceBW.toDoubleOrNull()
                     val colored = editPriceColored.toDoubleOrNull()
+
                     if (editType.isNotBlank() && editSize.isNotBlank() && bw != null && colored != null) {
-                        val updatedPaper = PaperOption(editType, editSize, bw, colored)
-                        paperViewModel.updatePaperOption(ownerId, editingPaperIndex!!, updatedPaper)
+                        paperViewModel.updatePaperOption(
+                            ownerId,
+                            editingPaperIndex!!,
+                            PaperOption(editType, editSize, bw, colored)
+                        )
+
+                        scope.launch {
+                            snackbarHostState.showSnackbar(
+                                message = "Paper option updated",
+                                duration = SnackbarDuration.Short
+                            )
+                        }
+
                         isEditDialogOpen = false
-                    } else {
-                        scope.launch { snackbar.showSnackbar("Please fill all fields correctly") }
                     }
                 }) {
                     Text("Save")
@@ -224,6 +253,46 @@ fun ManagePaperScreen(ownerId: String, paperViewModel: PaperViewModel) {
             }
         )
     }
+
+    // ---------- Delete Confirmation + UNDO ----------
+    if (isDeleteDialogOpen && deletingPaperIndex != null) {
+        AlertDialog(
+            onDismissRequest = { isDeleteDialogOpen = false },
+            title = { Text("Delete Paper Option") },
+            text = { Text("Are you sure you want to delete this paper option?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val deletedIndex = deletingPaperIndex!!
+                    val deletedPaper = recentlyDeletedPaper!!
+
+                    paperViewModel.deletePaperOption(ownerId, deletedIndex)
+
+                    scope.launch {
+                        val result = snackbarHostState.showSnackbar(
+                            message = "Paper option deleted",
+                            actionLabel = "UNDO",
+                            duration = SnackbarDuration.Short
+                        )
+
+                        if (result == SnackbarResult.ActionPerformed) {
+                            paperViewModel.addPaperOption(ownerId, deletedPaper)
+                        }
+                    }
+
+                    isDeleteDialogOpen = false
+                    deletingPaperIndex = null
+                }) {
+                    Text("Delete", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    isDeleteDialogOpen = false
+                    deletingPaperIndex = null
+                }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
-
-

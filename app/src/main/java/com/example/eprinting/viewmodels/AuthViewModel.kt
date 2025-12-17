@@ -150,28 +150,32 @@ class AuthViewModel : ViewModel() {
     fun signUp(email: String, password: String, userType: String, shopName: String = "") {
         _authState.value = AuthState.Loading
         val signUpData = _signUpData.value
+        val name = signUpData.name
+        val db = FirebaseFirestore.getInstance()
+        val auth = FirebaseAuth.getInstance()
 
-        FirebaseAuth.getInstance().createUserWithEmailAndPassword(email, password)
+        // 1️⃣ Create Firebase Auth user
+        auth.createUserWithEmailAndPassword(email, password)
             .addOnSuccessListener { result ->
-                val user = result.user ?: run {
+                val user = result.user
+                if (user == null) {
                     _authState.value = AuthState.Error("Failed to create user")
                     return@addOnSuccessListener
                 }
 
-                val name = signUpData.name
-
-                // ------------------- Update displayName -------------------
+                // 2️⃣ Update display name
                 user.updateProfile(
                     UserProfileChangeRequest.Builder()
                         .setDisplayName(name)
                         .build()
-                ).addOnCompleteListener { profileUpdateTask ->
-                    if (!profileUpdateTask.isSuccessful) {
+                ).addOnCompleteListener { task ->
+                    if (!task.isSuccessful) {
                         Log.e("AuthViewModel", "Failed to update displayName")
                     }
                 }
 
-                // ------------------- Save user info in Firestore -------------------
+                // 3️⃣ Prepare user document
+                val role = if (userType == "OWNER") UserRole.OWNER else UserRole.CUSTOMER
                 val userData = hashMapOf(
                     "name" to name,
                     "email" to email,
@@ -179,26 +183,45 @@ class AuthViewModel : ViewModel() {
                     "shopName" to if (userType == "OWNER") shopName else ""
                 )
 
-                val role = if (userType == "OWNER") UserRole.OWNER else UserRole.CUSTOMER
-
-                FirebaseFirestore.getInstance()
-                    .collection("users")
-                    .document(user.uid)
+                // 4️⃣ Save user document
+                db.collection("users").document(user.uid)
                     .set(userData)
                     .addOnSuccessListener {
-                        _authState.value = AuthState.Success(role)  // ✅ pass the role here
+
+                        // 5️⃣ If owner, create a shop document automatically
+                        if (userType == "OWNER") {
+                            val shopData = hashMapOf(
+                                "ownerId" to user.uid,
+                                "shopName" to shopName,
+                                "paperOptions" to emptyList<Map<String, Any>>() // Required for paper management
+                            )
+
+                            db.collection("shops")
+                                .add(shopData)
+                                .addOnSuccessListener {
+                                    Log.d("AuthViewModel", "Shop created successfully")
+                                    _authState.value = AuthState.Success(role)
+                                }
+                                .addOnFailureListener { e ->
+                                    Log.e("AuthViewModel", "Failed to create shop: ${e.message}")
+                                    _authState.value = AuthState.Error("Failed to create shop: ${e.message}")
+                                }
+                        } else {
+                            // Customer signup complete
+                            _authState.value = AuthState.Success(role)
+                        }
                     }
                     .addOnFailureListener { e ->
                         _authState.value = AuthState.Error("Failed to save user data: ${e.message}")
                     }
-
-                    .addOnFailureListener { e ->
-                        _authState.value = AuthState.Error(e.message ?: "Sign up failed")
-                    }
+            }
+            .addOnFailureListener { e ->
+                _authState.value = AuthState.Error(e.message ?: "Sign up failed")
             }
     }
 
-        // -------------------
+
+    // -------------------
         // Login
         fun login(email: String, password: String) {
             _authState.value = AuthState.Loading
@@ -207,9 +230,9 @@ class AuthViewModel : ViewModel() {
                     val uid = result.user?.uid ?: return@addOnSuccessListener
                     db.collection("users").document(uid).get()
                         .addOnSuccessListener { doc ->
-                            val roleString = doc.getString("role") ?: "CUSTOMER"
-                            val role = UserRole.fromString(roleString)
-                            _authState.value = AuthState.Success(role)
+                            val roleString = doc.getString("userType") ?: "CUSTOMER"
+                            val userType = UserRole.fromString(roleString)
+                            _authState.value = AuthState.Success(userType)
                         }
                         .addOnFailureListener {
                             _authState.value = AuthState.Error("Failed to load user")

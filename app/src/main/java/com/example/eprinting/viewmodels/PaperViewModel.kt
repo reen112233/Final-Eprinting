@@ -13,6 +13,16 @@ class PaperViewModel : ViewModel() {
 
     private val db = FirebaseFirestore.getInstance()
 
+    private fun paperMap(list: List<PaperOption>) =
+        list.map {
+            mapOf(
+                "type" to it.type,
+                "size" to it.size,
+                "priceBW" to it.priceBW,
+                "priceColored" to it.priceColored
+            )
+        }
+
     fun loadPaperOptions(ownerId: String) {
         db.collection("shops")
             .whereEqualTo("ownerId", ownerId)
@@ -20,37 +30,17 @@ class PaperViewModel : ViewModel() {
             .addOnSuccessListener { snapshot ->
                 if (snapshot.documents.isNotEmpty()) {
                     val doc = snapshot.documents[0]
-                    val options = (doc.get("paperOptions") as? List<Map<String, Any>>)?.map {
+                    val options = (doc.get("paperOption") as? List<Map<String, Any>>)?.map {
                         PaperOption(
-                            type = it["type"] as? String ?: "",
-                            size = it["size"] as? String ?: "",
-                            priceBW = (it["priceBW"] as? Number)?.toDouble() ?: 0.0,
-                            priceColored = (it["priceColored"] as? Number)?.toDouble() ?: 0.0
+                            it["type"] as? String ?: "",
+                            it["size"] as? String ?: "",
+                            (it["priceBW"] as? Number)?.toDouble() ?: 0.0,
+                            (it["priceColored"] as? Number)?.toDouble() ?: 0.0
                         )
                     } ?: emptyList()
                     _paperOptions.value = options
                 }
             }
-    }
-
-    fun updatePaperOption(ownerId: String, index: Int, updatedPaper: PaperOption) {
-        val currentList = _paperOptions.value.toMutableList() // _paperOptions is your StateFlow or LiveData
-        if (index in currentList.indices) {
-            currentList[index] = updatedPaper
-            _paperOptions.value = currentList
-            // Also update in Firestore
-            val db = FirebaseFirestore.getInstance()
-            db.collection("shops")
-                .document(ownerId)
-                .update("paperOptions", currentList.map {
-                    mapOf(
-                        "type" to it.type,
-                        "size" to it.size,
-                        "priceBW" to it.priceBW,
-                        "priceColored" to it.priceColored
-                    )
-                })
-        }
     }
 
     fun addPaperOption(ownerId: String, option: PaperOption) {
@@ -60,38 +50,45 @@ class PaperViewModel : ViewModel() {
             .addOnSuccessListener { snapshot ->
                 if (snapshot.documents.isNotEmpty()) {
                     val docRef = snapshot.documents[0].reference
-                    val updatedList = _paperOptions.value + option
-                    docRef.update("paperOptions", updatedList.map {
-                        mapOf(
-                            "type" to it.type,
-                            "size" to it.size,
-                            "priceBW" to it.priceBW,
-                            "priceColored" to it.priceColored
-                        )
-                    })
-                    _paperOptions.value = updatedList
+                    val updated = _paperOptions.value + option
+                    docRef.update("paperOption", paperMap(updated))
+                    _paperOptions.value = updated
+                }
+            }
+    }
+
+    fun updatePaperOption(ownerId: String, index: Int, updatedPaper: PaperOption) {
+        val list = _paperOptions.value.toMutableList()
+        if (index !in list.indices) return
+        list[index] = updatedPaper
+        _paperOptions.value = list
+
+        db.collection("shops")
+            .whereEqualTo("ownerId", ownerId)
+            .get()
+            .addOnSuccessListener {
+                if (it.documents.isNotEmpty()) {
+                    it.documents[0].reference
+                        .update("paperOption", paperMap(list))
                 }
             }
     }
 
     fun deletePaperOption(ownerId: String, index: Int) {
+        val list = _paperOptions.value.toMutableList()
+        if (index !in list.indices) return
+        list.removeAt(index)
+        _paperOptions.value = list
+
         db.collection("shops")
             .whereEqualTo("ownerId", ownerId)
             .get()
-            .addOnSuccessListener { snapshot ->
-                if (snapshot.documents.isNotEmpty()) {
-                    val docRef = snapshot.documents[0].reference
-                    val updatedList = _paperOptions.value.toMutableList().apply { removeAt(index) }
-                    docRef.update("paperOptions", updatedList.map {
-                        mapOf(
-                            "type" to it.type,
-                            "size" to it.size,
-                            "priceBW" to it.priceBW,
-                            "priceColored" to it.priceColored
-                        )
-                    })
-                    _paperOptions.value = updatedList
+            .addOnSuccessListener {
+                if (it.documents.isNotEmpty()) {
+                    it.documents[0].reference
+                        .update("paperOption", paperMap(list))
                 }
             }
     }
 }
+

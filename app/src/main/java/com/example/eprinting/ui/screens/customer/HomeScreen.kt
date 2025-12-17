@@ -130,7 +130,7 @@
                     val shopName = doc.getString("shopName")
                     val ownerId = doc.getString("ownerId")
                     if (shopName != null && ownerId != null) {
-                        val paperOptions = (doc.get("paperOptions") as? List<Map<String, Any>>)?.map {
+                        val paperOptions = (doc.get("paperOption") as? List<Map<String, Any>>)?.map {
                             PaperOption(
                                 name = "${it["type"]} ${it["size"]}",
                                 priceBW = (it["priceBW"] as Number).toDouble(),

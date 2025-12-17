@@ -133,7 +133,6 @@ fun TransactionsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(paddingValues)
                 .background(Color(0xFFF9FAFB))
         ) {
             // ---------- Today's Earnings Card ----------
