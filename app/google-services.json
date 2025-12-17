@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "203589636334",
+    "project_id": "eprinting-34d91",
+    "storage_bucket": "eprinting-34d91.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:203589636334:android:df2de64aa8bafe1f7023ff",
+        "android_client_info": {
+          "package_name": "com.example.eprinting"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDHYvoSFkWbgqt-O-OmLGJHoSjHj5_xFl0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
