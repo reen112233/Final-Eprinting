@@ -5,11 +5,9 @@ import ProfileScreen
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
-import androidx.navigation.navArgument
 import com.example.eprinting.data.OrderViewModel
 import com.example.eprinting.data.UserRole
 import com.example.eprinting.ui.screens.LoginScreen
@@ -17,7 +15,6 @@ import com.example.eprinting.ui.screens.SignUpScreen
 import com.example.eprinting.ui.screens.customer.CustomerEditProfileScreen
 import com.example.eprinting.ui.screens.customer.CustomerOrderScreen
 import com.example.eprinting.ui.screens.customer.HomeScreen
-
 import com.example.eprinting.ui.screens.owner.OwnerHomeScreen
 import com.example.eprinting.ui.viewmodels.PaperViewModel
 import com.example.eprinting.viewmodels.AuthViewModel
