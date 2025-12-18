@@ -73,6 +73,7 @@ dependencies {
     implementation("com.google.android.material:material:1.13.0")
     implementation(libs.firebase.crashlytics.buildtools)
     implementation(libs.androidx.ui.text)
+    implementation(libs.play.services.wallet)
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     implementation("androidx.activity:activity-compose:1.9.0")

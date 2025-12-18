@@ -16,7 +16,8 @@ googleGmsGoogleServices = "4.4.4"
 navigationTesting = "2.9.6"
 composeBom = "2024.12.01"
 firebaseCrashlyticsBuildtools = "3.0.6"
-uiText = "1.10.0"   # ← FIXED
+uiText = "1.10.0"
+playServicesWallet = "19.5.0"   # ← FIXED
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -39,6 +40,7 @@ androidx-foundation = { group = "androidx.compose.foundation", name = "foundatio
 androidx-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 firebase-crashlytics-buildtools = { group = "com.google.firebase", name = "firebase-crashlytics-buildtools", version.ref = "firebaseCrashlyticsBuildtools" }
 androidx-ui-text = { group = "androidx.compose.ui", name = "ui-text", version.ref = "uiText" }
+play-services-wallet = { group = "com.google.android.gms", name = "play-services-wallet", version.ref = "playServicesWallet" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

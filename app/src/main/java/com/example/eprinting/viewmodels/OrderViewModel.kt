@@ -26,15 +26,17 @@ class OrderViewModel : ViewModel() {
         newStatus: String,
         onComplete: (Boolean) -> Unit = {}
     ) {
+        val updates: Map<String, Any> = mapOf("status" to newStatus)
         firestore.collection("orders")
             .document(orderId)
-            .update("status", newStatus)
+            .update(updates)
             .addOnSuccessListener { onComplete(true) }
             .addOnFailureListener { e ->
                 Log.e("OrderViewModel", "Failed to update order status", e)
                 onComplete(false)
             }
     }
+
 
     // ---------------- LOAD ORDERS (ONE TIME) ----------------
     fun loadCustomerOrders(userId: String) {
